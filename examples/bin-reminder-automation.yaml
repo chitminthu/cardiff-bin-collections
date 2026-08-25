@@ -1,0 +1,19 @@
+# Replace both entity IDs and notify.notify before saving this automation.
+alias: Bin reminder - tomorrow
+description: Remind me at 6pm when a Cardiff bin collection is tomorrow.
+triggers:
+  - trigger: time
+    at: "18:00:00"
+conditions:
+  - condition: template
+    value_template: >-
+      {{ states('sensor.REPLACE_WITH_NEXT_COLLECTION') ==
+         (now().date() + timedelta(days=1)).isoformat() }}
+actions:
+  - action: notify.notify
+    data:
+      title: Bins tomorrow
+      message: >-
+        Put out: {{ state_attr('sensor.REPLACE_WITH_NEXT_COLLECTION', 'bins')
+        | default([], true) | join(', ') }}.
+mode: single

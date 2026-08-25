@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Find your Cardiff address",
+        "description": "Enter the postcode for the property whose collections you want to track.",
+        "data": {
+          "postcode": "Postcode"
+        }
+      },
+      "address": {
+        "title": "Select your address",
+        "description": "Choose the property to add.",
+        "data": {
+          "uprn": "Address"
+        }
+      },
+      "reconfigure": {
+        "title": "Change your Cardiff address",
+        "description": "Enter the postcode for the replacement property.",
+        "data": {
+          "postcode": "Postcode"
+        }
+      },
+      "reconfigure_address": {
+        "title": "Select your new address",
+        "description": "Choose the replacement property. Existing entity IDs and dashboards will be preserved.",
+        "data": {
+          "uprn": "Address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Cardiff Council",
+      "invalid_postcode": "Enter a valid UK postcode",
+      "invalid_response": "Cardiff Council returned an unexpected response",
+      "no_addresses": "No Cardiff residential addresses were found for that exact postcode",
+      "no_collections": "No upcoming collections were found for that address"
+    },
+    "abort": {
+      "already_configured": "This address is already configured",
+      "reconfigure_successful": "The property was updated successfully"
+    }
+  },
+  "entity": {
+    "button": {
+      "refresh": {"name": "Refresh now"}
+    },
+    "sensor": {
+      "next_collection": {"name": "Next collection"},
+      "following_collection": {"name": "Following collection"},
+      "general": {"name": "General waste"},
+      "recycling": {"name": "Recycling"},
+      "food": {"name": "Food waste"},
+      "garden": {"name": "Garden waste"},
+      "glass": {"name": "Glass"},
+      "hygiene": {"name": "Hygiene waste"},
+      "christmas_tree": {"name": "Christmas tree"}
+    }
+  }
+}

@@ -1,0 +1,145 @@
+# Requires the custom:button-card dashboard card from HACS.
+# Replace the two entity IDs below with your own Next collection and
+# Following collection entity IDs before saving the card.
+type: custom:button-card
+entity: sensor.REPLACE_WITH_NEXT_COLLECTION
+triggers_update:
+  - sensor.REPLACE_WITH_NEXT_COLLECTION
+  - sensor.REPLACE_WITH_FOLLOWING_COLLECTION
+show_icon: false
+show_name: false
+show_state: false
+tap_action:
+  action: none
+styles:
+  card:
+    - padding: 0
+    - overflow: hidden
+    - border: none
+    - border-radius: 22px
+    - background: linear-gradient(145deg, rgba(19, 116, 74, 0.98), rgba(7, 64, 45, 0.98))
+    - color: white
+    - box-shadow: 0 10px 28px rgba(0, 45, 28, 0.24)
+  grid:
+    - grid-template-areas: '"content"'
+    - grid-template-columns: 1fr
+  custom_fields:
+    content:
+      - width: 100%
+custom_fields:
+  content: |
+    [[[
+      const next = entity;
+      const following = states['sensor.REPLACE_WITH_FOLLOWING_COLLECTION'];
+
+      const icons = {
+        general: 'mdi:trash-can',
+        recycling: 'mdi:recycle',
+        food: 'mdi:food-apple',
+        garden: 'mdi:leaf',
+        glass: 'mdi:bottle-soda',
+        hygiene: 'mdi:shower-head',
+        'christmas tree': 'mdi:pine-tree',
+      };
+
+      const escapeHtml = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+
+      const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '');
+
+      const dateDetails = (value) => {
+        if (!validDate(value)) {
+          return { relative: 'Date unavailable', full: 'Waiting for collection data' };
+        }
+        const collection = new Date(`${value}T12:00:00`);
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        const days = Math.round((collection - today) / 86400000);
+        let relative;
+        if (days === 0) relative = 'Today';
+        else if (days === 1) relative = 'Tomorrow';
+        else if (days > 1) relative = `In ${days} days`;
+        else relative = `${Math.abs(days)} days ago`;
+        return {
+          relative,
+          full: new Intl.DateTimeFormat('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long'
+          }).format(collection),
+        };
+      };
+
+      const binDetails = (state) => {
+        if (!state) return [];
+        const detailed = state.attributes.bin_details;
+        if (Array.isArray(detailed) && detailed.length) return detailed;
+        return (state.attributes.bins ?? []).map((type) => ({ type }));
+      };
+
+      const binsMarkup = (state, compact = false) => {
+        const bins = binDetails(state);
+        if (!bins.length) return '<div class="empty">No bin details available</div>';
+        return `<div class="bins ${compact ? 'compact' : ''}">${bins.map((bin) => {
+          const type = String(bin.type ?? 'Bin');
+          const key = type.toLowerCase();
+          const icon = icons[key] ?? 'mdi:trash-can-outline';
+          const image = bin.image_url
+            ? `<img src="${escapeHtml(bin.image_url)}" alt="${escapeHtml(type)}" onerror="this.remove()">`
+            : '';
+          return `
+            <div class="bin">
+              <div class="art">
+                <ha-icon icon="${icon}"></ha-icon>
+                ${image}
+              </div>
+              <strong>${escapeHtml(type)}</strong>
+            </div>`;
+        }).join('')}</div>`;
+      };
+
+      const nextDate = dateDetails(next?.state);
+      const followingDate = dateDetails(following?.state);
+
+      return `
+        <style>
+          .wrap { padding: 20px; font-family: var(--paper-font-body1_-_font-family, inherit); }
+          .eyebrow { opacity: .72; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+          .date-row { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-top: 5px; }
+          .date-row h2 { font-size: 26px; line-height: 1.08; margin: 0; }
+          .date-row span { opacity: .82; font-size: 14px; text-align: right; }
+          .bins { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 10px; margin-top: 18px; }
+          .bin { min-width: 0; padding: 11px 8px; border-radius: 16px; background: rgba(255,255,255,.11); text-align: center; }
+          .art { position: relative; display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto 7px; }
+          .art ha-icon { width: 34px; color: rgba(255,255,255,.75); }
+          .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+          .bin strong { display: block; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+          .following { margin: 17px -20px -20px; padding: 14px 20px 17px; background: rgba(0,0,0,.14); }
+          .following-head { display: flex; justify-content: space-between; gap: 12px; }
+          .following-head strong { font-size: 14px; }
+          .following-head span { opacity: .72; font-size: 12px; text-align: right; }
+          .bins.compact { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+          .bins.compact .bin { display: flex; align-items: center; gap: 6px; width: auto; padding: 5px 9px 5px 5px; }
+          .bins.compact .art { width: 30px; height: 30px; margin: 0; }
+          .bins.compact .art ha-icon { width: 19px; }
+          .bins.compact .bin strong { font-size: 11px; }
+          .empty { margin-top: 16px; opacity: .7; font-size: 13px; }
+        </style>
+        <div class="wrap">
+          <div class="eyebrow">Upcoming bin day</div>
+          <div class="date-row">
+            <h2>${escapeHtml(nextDate.relative)}</h2>
+            <span>${escapeHtml(nextDate.full)}</span>
+          </div>
+          ${binsMarkup(next)}
+          <div class="following">
+            <div class="following-head">
+              <strong>Following collection</strong>
+              <span>${escapeHtml(followingDate.full)}</span>
+            </div>
+            ${binsMarkup(following, true)}
+          </div>
+        </div>`;
+    ]]]
