@@ -15,7 +15,7 @@ date sensors you can use in dashboards and automations.
 - Address changes through **Settings → Devices & services → Reconfigure**.
 
 Postcodes are not case-sensitive, and the space is optional. For example,
-`cf10 5fw` and `CF105FW` are treated as the same postcode.
+`cf99 9zz` and `CF999ZZ` are treated as the same postcode.
 
 ## Install with HACS
 
@@ -26,6 +26,32 @@ Postcodes are not case-sensitive, and the space is optional. For example,
 4. Restart Home Assistant.
 5. Go to **Settings → Devices & services → Add integration** and search for
    **Cardiff Bin Collections**.
+
+## Entities
+
+Collection sensors use `YYYY-MM-DD` date states. Dates that have passed are
+ignored automatically, so **Next collection** always points to today or a future
+date. If only one future date is cached, **Following collection** is `unknown`
+until the next schedule update.
+
+| Entity | What it shows |
+| --- | --- |
+| Next collection | The earliest collection that has not passed |
+| Following collection | The next collection after that, when available |
+| General, Recycling, Food, Garden and Glass | The next date for that waste type |
+| Hygiene and Christmas tree | Less common waste types; disabled by default |
+| Refresh now | Requests fresh data, limited to once per hour |
+
+The two combined collection sensors include `day`, `bins`, `bin_ids`,
+`collection_types` and `bin_details`. Each `bin_details` item contains `type`,
+`bin_id`, `collection_type` and `image_url`. Individual waste sensors expose the
+same details for their bin where relevant.
+
+Collection sensors also expose `data_source`, `last_successful_refresh`,
+`next_scheduled_refresh`, `cache_age_hours` and `last_refresh_error`. These are
+useful in dashboards and automations for checking whether live or cached data is
+being shown. Entity IDs depend on your Home Assistant naming, so copy them from
+the entity settings rather than relying on an example ID.
 
 ## Dashboard card
 

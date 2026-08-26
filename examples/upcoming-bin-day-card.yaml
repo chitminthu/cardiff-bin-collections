@@ -52,9 +52,6 @@ custom_fields:
       const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '');
 
       const dateDetails = (value) => {
-        if (!validDate(value)) {
-          return { relative: 'Date unavailable', full: 'Waiting for collection data' };
-        }
         const collection = new Date(`${value}T12:00:00`);
         const today = new Date();
         today.setHours(12, 0, 0, 0);
@@ -100,8 +97,18 @@ custom_fields:
         }).join('')}</div>`;
       };
 
-      const nextDate = dateDetails(next?.state);
-      const followingDate = dateDetails(following?.state);
+      const nextAvailable = validDate(next?.state);
+      const followingAvailable = validDate(following?.state);
+      const refreshError = next?.attributes?.last_refresh_error
+        ?? following?.attributes?.last_refresh_error;
+      const nextDate = nextAvailable ? dateDetails(next.state) : null;
+      const followingDate = followingAvailable ? dateDetails(following.state) : null;
+      const nextMessage = refreshError
+        ? 'Refresh failed — no upcoming data'
+        : 'Waiting for updated collection data';
+      const followingMessage = refreshError
+        ? 'Refresh failed — using saved data'
+        : 'Waiting for the next schedule update';
 
       return `
         <style>
@@ -120,6 +127,7 @@ custom_fields:
           .following-head { display: flex; justify-content: space-between; gap: 12px; }
           .following-head strong { font-size: 14px; }
           .following-head span { opacity: .72; font-size: 12px; text-align: right; }
+          .waiting { margin-top: 9px; opacity: .72; font-size: 12px; }
           .bins.compact { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
           .bins.compact .bin { display: flex; align-items: center; gap: 6px; width: auto; padding: 5px 9px 5px 5px; }
           .bins.compact .art { width: 30px; height: 30px; margin: 0; }
@@ -130,16 +138,18 @@ custom_fields:
         <div class="wrap">
           <div class="eyebrow">Upcoming bin day</div>
           <div class="date-row">
-            <h2>${escapeHtml(nextDate.relative)}</h2>
-            <span>${escapeHtml(nextDate.full)}</span>
+            <h2>${nextAvailable ? escapeHtml(nextDate.relative) : 'No upcoming date'}</h2>
+            <span>${nextAvailable ? escapeHtml(nextDate.full) : escapeHtml(nextMessage)}</span>
           </div>
-          ${binsMarkup(next)}
+          ${nextAvailable ? binsMarkup(next) : ''}
           <div class="following">
             <div class="following-head">
               <strong>Following collection</strong>
-              <span>${escapeHtml(followingDate.full)}</span>
+              <span>${followingAvailable ? escapeHtml(followingDate.full) : ''}</span>
             </div>
-            ${binsMarkup(following, true)}
+            ${followingAvailable
+              ? binsMarkup(following, true)
+              : `<div class="waiting">${escapeHtml(followingMessage)}</div>`}
           </div>
         </div>`;
     ]]]

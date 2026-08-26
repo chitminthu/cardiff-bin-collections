@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .api import CollectionData, CollectionWeek
 from .const import CONF_ADDRESS, DOMAIN, WASTE_TYPES
@@ -39,8 +40,8 @@ RARE_WASTE_TYPES = {"hygiene", "christmas tree"}
 class CardiffBinSensorDescription(SensorEntityDescription):
     """Describe one Cardiff collection sensor."""
 
-    value_fn: Callable[[CollectionData], date | None]
-    attributes_fn: Callable[[CollectionData], dict[str, Any]]
+    value_fn: Callable[[CollectionData, date], date | None]
+    attributes_fn: Callable[[CollectionData, date], dict[str, Any]]
 
 
 def _week_attributes(week: CollectionWeek | None) -> dict[str, Any]:
@@ -64,24 +65,27 @@ def _week_attributes(week: CollectionWeek | None) -> dict[str, Any]:
 
 
 def _week_at(index: int) -> CardiffBinSensorDescription:
-    def week(data: CollectionData) -> CollectionWeek | None:
-        return data.weeks[index] if len(data.weeks) > index else None
+    def week(data: CollectionData, today: date) -> CollectionWeek | None:
+        upcoming = data.upcoming_weeks(today)
+        return upcoming[index] if len(upcoming) > index else None
 
     return CardiffBinSensorDescription(
         key="next_collection" if index == 0 else "following_collection",
         translation_key="next_collection" if index == 0 else "following_collection",
         device_class=SensorDeviceClass.DATE,
         icon="mdi:calendar-arrow-right",
-        value_fn=lambda data: week(data).collection_date if week(data) else None,
-        attributes_fn=lambda data: _week_attributes(week(data)),
+        value_fn=lambda data, today: (
+            week(data, today).collection_date if week(data, today) else None
+        ),
+        attributes_fn=lambda data, today: _week_attributes(week(data, today)),
     )
 
 
 def _type_description(waste_type: str) -> CardiffBinSensorDescription:
     key = waste_type.replace(" ", "_")
 
-    def match(data: CollectionData):
-        return data.next_for_type(waste_type)
+    def match(data: CollectionData, today: date):
+        return data.next_for_type(waste_type, today)
 
     return CardiffBinSensorDescription(
         key=key,
@@ -89,14 +93,16 @@ def _type_description(waste_type: str) -> CardiffBinSensorDescription:
         device_class=SensorDeviceClass.DATE,
         icon=WASTE_ICONS.get(waste_type, "mdi:trash-can"),
         entity_registry_enabled_default=waste_type not in RARE_WASTE_TYPES,
-        value_fn=lambda data: match(data)[0] if match(data) else None,
-        attributes_fn=lambda data: (
+        value_fn=lambda data, today: (
+            match(data, today)[0] if match(data, today) else None
+        ),
+        attributes_fn=lambda data, today: (
             {
-                "bin_id": match(data)[1].bin_id,
-                "collection_type": match(data)[1].collection_type,
-                "image_url": match(data)[1].image_url,
+                "bin_id": match(data, today)[1].bin_id,
+                "collection_type": match(data, today)[1].collection_type,
+                "image_url": match(data, today)[1].image_url,
             }
-            if match(data)
+            if match(data, today)
             else {}
         ),
     )
@@ -149,12 +155,16 @@ class CardiffBinCollectionSensor(
     @property
     def native_value(self) -> date | None:
         """Return the collection date."""
-        return self.entity_description.value_fn(self.coordinator.data)
+        return self.entity_description.value_fn(
+            self.coordinator.data, dt_util.now().date()
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return collection details."""
         return {
-            **self.entity_description.attributes_fn(self.coordinator.data),
+            **self.entity_description.attributes_fn(
+                self.coordinator.data, dt_util.now().date()
+            ),
             **self.coordinator.status_attributes,
         }

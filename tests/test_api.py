@@ -86,6 +86,45 @@ def test_parses_collection_dates_and_bins() -> None:
     assert result.next_for_type("glass") is None
 
 
+@pytest.mark.parametrize(
+    ("today", "expected_dates"),
+    [
+        (date(2026, 8, 24), [date(2026, 8, 25), date(2026, 9, 1)]),
+        (date(2026, 8, 25), [date(2026, 8, 25), date(2026, 9, 1)]),
+        (date(2026, 8, 26), [date(2026, 9, 1)]),
+        (date(2026, 9, 2), []),
+    ],
+)
+def test_upcoming_weeks_exclude_expired_dates(
+    today: date, expected_dates: list[date]
+) -> None:
+    result = api.parse_collection_data(SAMPLE)
+
+    assert [week.collection_date for week in result.upcoming_weeks(today)] == (
+        expected_dates
+    )
+
+
+def test_waste_type_date_respects_today() -> None:
+    result = api.parse_collection_data(SAMPLE)
+
+    assert result.next_for_type("food", date(2026, 8, 26)) is None
+    assert result.next_for_type("general", date(2026, 8, 26))[0] == date(2026, 9, 1)
+
+
+@pytest.mark.asyncio
+async def test_verification_token_request_has_a_timeout() -> None:
+    class TimeoutSession:
+        def get(self, *args, **kwargs):
+            assert kwargs["timeout"] is api.REQUEST_TIMEOUT
+            raise TimeoutError
+
+    client = api.CardiffBinCollectionsApi(TimeoutSession())
+
+    with pytest.raises(api.CardiffBinCollectionsConnectionError):
+        await client._verification_token()
+
+
 def test_rejects_malformed_collection_response() -> None:
     with pytest.raises(api.CardiffBinCollectionsResponseError):
         api.parse_collection_data({"language": "en-GB"})

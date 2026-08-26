@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_call_later, async_track_time_change
@@ -93,16 +93,30 @@ class CardiffBinCollectionsCoordinator(DataUpdateCoordinator[CollectionData]):
         return self._cache_needs_refresh(data, saved_at)
 
     def async_start_schedule(self) -> None:
-        """Schedule the stable weekly refresh time for this property."""
+        """Schedule weekly retrieval and local midnight date rollover."""
         refresh_time = refresh_time_for_uprn(self._uprn)
-        cancel = async_track_time_change(
+        cancel_refresh = async_track_time_change(
             self.hass,
             self._async_scheduled_refresh,
             hour=refresh_time.hour,
             minute=refresh_time.minute,
             second=0,
         )
-        self.config_entry.async_on_unload(cancel)
+        self.config_entry.async_on_unload(cancel_refresh)
+        cancel_rollover = async_track_time_change(
+            self.hass,
+            self._async_midnight_rollover,
+            hour=0,
+            minute=0,
+            second=5,
+        )
+        self.config_entry.async_on_unload(cancel_rollover)
+
+    @callback
+    def _async_midnight_rollover(self, _now: datetime) -> None:
+        """Recalculate date sensors from the cache without a council request."""
+        if self.data is not None:
+            self.async_set_updated_data(self.data)
 
     async def _async_scheduled_refresh(self, now: datetime) -> None:
         """Refresh only on Sunday when the daily time listener fires."""

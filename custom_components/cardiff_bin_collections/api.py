@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-from aiohttp import ClientError, ClientSession
+from aiohttp import ClientError, ClientSession, ClientTimeout
 
 from .const import (
     ADDRESS_LANGUAGE,
@@ -21,6 +21,7 @@ from .const import (
 )
 
 TOKEN_PATTERN = re.compile(r"window\.verificationToken\s*=\s*'([^']+)'\s*;")
+REQUEST_TIMEOUT = ClientTimeout(total=30, connect=10)
 
 
 def normalize_postcode(postcode: str) -> str:
@@ -86,10 +87,18 @@ class CollectionData:
     weeks: tuple[CollectionWeek, ...]
     has_glass_bin: bool
 
-    def next_for_type(self, waste_type: str) -> tuple[date, Bin] | None:
+    def upcoming_weeks(self, on_or_after: date) -> tuple[CollectionWeek, ...]:
+        """Return collection weeks that have not passed."""
+        return tuple(week for week in self.weeks if week.collection_date >= on_or_after)
+
+    def next_for_type(
+        self, waste_type: str, on_or_after: date | None = None
+    ) -> tuple[date, Bin] | None:
         """Return the earliest known collection for a waste type."""
         wanted = waste_type.casefold()
         for week in self.weeks:
+            if on_or_after is not None and week.collection_date < on_or_after:
+                continue
             for bin_item in week.bins:
                 if bin_item.waste_type.casefold() == wanted:
                     return week.collection_date, bin_item
@@ -108,6 +117,7 @@ class CardiffBinCollectionsApi:
             async with self._session.get(
                 TOKEN_URL,
                 headers={"Accept": "text/html,application/xhtml+xml"},
+                timeout=REQUEST_TIMEOUT,
             ) as response:
                 body = await response.text()
         except (ClientError, TimeoutError) as err:
@@ -149,6 +159,7 @@ class CardiffBinCollectionsApi:
                     url,
                     headers=self._headers(token),
                     json=payload,
+                    timeout=REQUEST_TIMEOUT,
                 ) as response:
                     last_status = response.status
                     if response.status == 200:
