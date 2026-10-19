@@ -19,13 +19,12 @@ Postcodes are not case-sensitive, and the space is optional. For example,
 
 ## Install with HACS
 
-1. In HACS, open **Custom repositories** from the three-dot menu.
-2. Add `https://github.com/chitminthu/cardiff-bin-collections` as an
-   **Integration**.
-3. Find **Cardiff Bin Collections** in HACS and download it.
+1. Open **HACS** in Home Assistant.
+2. Search for **Cardiff Bin Collections**.
+3. Select it and choose **Download**.
 4. Restart Home Assistant.
-5. Go to **Settings → Devices & services → Add integration** and search for
-   **Cardiff Bin Collections**.
+5. Go to **Settings → Devices & services → Add integration**.
+6. Search for **Cardiff Bin Collections** and follow the setup steps.
 
 ## Entities
 
