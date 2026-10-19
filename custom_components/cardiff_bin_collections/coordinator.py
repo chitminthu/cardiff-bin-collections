@@ -173,7 +173,7 @@ class CardiffBinCollectionsCoordinator(DataUpdateCoordinator[CollectionData]):
             "data_source": self._data_source,
             "last_successful_refresh": self._last_success,
             "next_scheduled_refresh": next_sunday_refresh(
-                now, dt_util.get_time_zone(self.hass.config.time_zone), self._uprn
+                now, dt_util.get_default_time_zone(), self._uprn
             ),
             "cache_age_hours": (
                 round((now - self._last_success).total_seconds() / 3600, 1)
